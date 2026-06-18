@@ -119,6 +119,16 @@ export const GeneratedFileSchema = z.object({
   purpose: z.string(),
 });
 
+export const GeneratedSourceSnapshotSchema = z.object({
+  agent: z.literal("sandbox"),
+  status: z.enum(["source_ready", "source_incomplete"]),
+  sandboxId: z.string(),
+  workspacePath: z.literal("generated-app"),
+  files: z.array(GeneratedFileSchema),
+  missingFiles: z.array(z.string()),
+  notes: z.array(z.string()),
+});
+
 export const QualityPlanSchema = z.object({
   packageManager: z.enum(["bun", "npm", "pnpm", "yarn"]).default("bun"),
   commands: z.array(z.string()),
@@ -269,6 +279,9 @@ export const SecurityReviewResultSchema = z.object({
 export type CodeWriterResult = z.infer<typeof CodeWriterResultSchema>;
 export type ConversationResult = z.infer<typeof ConversationResultSchema>;
 export type GeneratedFile = z.infer<typeof GeneratedFileSchema>;
+export type GeneratedSourceSnapshot = z.infer<
+  typeof GeneratedSourceSnapshotSchema
+>;
 export type QualityPlan = z.infer<typeof QualityPlanSchema>;
 export type SandboxValidationResult = z.infer<
   typeof SandboxValidationResultSchema

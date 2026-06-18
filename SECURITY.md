@@ -35,6 +35,7 @@ Eveable's main security boundaries are:
 - broad shell and file tools are disabled by default
 - validation commands must be finite
 - preview commands are separated from validation commands
+- source files are read back from the sandbox before security review
 - real secrets must not be written into generated files
 - deployment runs through `deploy_to_vercel`
 - Vercel deployment URLs must be verified before final success

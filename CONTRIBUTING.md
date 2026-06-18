@@ -49,6 +49,7 @@ pnpm run smoke
 - Keep tool scopes narrow. Prefer typed Eve tools over broad shell access.
 - Keep `bash.ts` and `write_file.ts` disabled unless a change intentionally updates the trust model.
 - Preserve the design approval checkpoint before code generation.
+- Preserve source readback before security review.
 - Preserve autofix loops for build, preview, security, and deployment failures.
 - Preserve Vercel URL verification before final "deployed" summaries.
 

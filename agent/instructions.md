@@ -12,9 +12,9 @@ conversation concise, but make the internal workflow complete.
 Important completion rule: writing files into the sandbox is not a completed
 build. Never send a final user-facing build summary immediately after
 `write_generated_files`. A build is complete only after quality commands pass,
-the preview process starts and passes its HTTP health check, and security review
-passes or explicitly blocks. If Vercel deployment is configured, a build is not
-complete until `deploy_to_vercel` returns a verified deployment URL.
+the preview process starts and passes its HTTP health check, security review
+passes, and `deploy_to_vercel` returns a verified deployment URL. A blocked
+security review is not a completed build.
 
 For every user message:
 
@@ -48,13 +48,23 @@ For every user message:
     quality commands, and call `start_preview` again. Try at most four preview
     autofix attempts. Do not stop after describing the issue unless the autofix
     agent returns `status="blocked"`.
-12. Call `security_review` with the generated files, sandbox results, and
-    preview health-check result.
-13. If security review needs fixes, call `autofix`, write patched files, rerun
+12. Call `read_generated_files` with the latest generated file list returned by
+    `code_writer` or `autofix`. Then call `security_review` with the exact
+    source files returned by `read_generated_files`, sandbox quality results,
+    and preview health-check result. Do not call `security_review` with only a
+    sandbox id, file paths, or a summary.
+13. If `read_generated_files` returns `status="source_incomplete"`, retry once
+    with the latest file list. If source is still incomplete, stop with a
+    user-facing blocked message that names the missing files.
+14. If security review needs fixes, call `autofix`, write patched files, rerun
     quality commands, restart preview, and review again in the same turn. Try at
     most four security autofix attempts. Do not stop after describing the patch
     unless the autofix agent returns `status="blocked"`.
-14. When the build is validated, preview health check passes, and security
+15. If security review returns `status="blocked"`, do not call
+    `deploy_to_vercel` and do not call the build ready. Return a concise
+    user-facing blocked message with the reason and what source/context is
+    missing.
+16. When the build is validated, preview health check passes, and security
     review passes, call `deploy_to_vercel` with `target="preview"` unless the
     user explicitly requested production. If deployment fails because of
     generated-app code, call `autofix`, write patched files, rerun quality
@@ -62,7 +72,7 @@ For every user message:
     most four deployment autofix attempts. If deployment is blocked by missing
     `VERCEL_TOKEN` or Vercel account/project configuration, tell the user the
     exact missing configuration.
-15. When deployment succeeds, call `conversation` with a final-response brief and
+17. When deployment succeeds, call `conversation` with a final-response brief and
     return a short summary to the user. Include the sandbox id, preview command,
     preview port, local preview health-check result, and Vercel deployment URL.
 
@@ -88,6 +98,8 @@ names and required fields are:
   `qualityPlan`, `handoff`.
 - `SecurityReviewResult`: `agent`, `status`, `summary`, `reviewedFiles`,
   `findings`, `hardeningNotes`, `nextAgent`.
+- `GeneratedSourceSnapshot`: `agent`, `status`, `sandboxId`, `workspacePath`,
+  `files`, `missingFiles`, `notes`.
 - `VercelDeploymentResult`: `agent`, `status`, `message`, `target`,
   `sandboxId`, `workspacePath`, `deploymentUrl`, `inspectUrl`, `projectName`,
   `command`, `verify`, `notes`, `nextAgent`.
