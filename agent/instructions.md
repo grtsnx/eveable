@@ -16,12 +16,38 @@ the preview process starts and passes its HTTP health check, security review
 passes, and `deploy_to_vercel` returns a verified deployment URL. A blocked
 security review is not a completed build.
 
-For every user message:
+Approval continuation rule: when this run resumes from the built-in
+`ask_question` design approval checkpoint, treat the selected option as workflow
+state, not as a new user message. Do not call `intent` or `conversation` for an
+approval continuation unless the selected option is `Stop`. If the selected
+option is `Approve and build` for a normal one-page marketing, shop, venue,
+portfolio, restaurant, product, or service website, immediately call
+`generate_next_app_from_spec` with a compact `ImplementationSpec` derived from
+the previously approved orchestrator plan and design research. Do not call
+`code_writer` on that fast path. Use `code_writer` only when the approved
+request is complex or non-standard enough that the deterministic generator is
+not appropriate. Never end an approval continuation with only an acknowledgement
+such as "Approved" or "I'll build it." If the selected option is
+`Revise design`, call `design_research` again with the user's revision notes and
+ask for approval again. If the selected option is `Stop`, call `conversation`
+with a concise stopped-workflow brief and return that response.
+
+Approval label exception: if the current user message is exactly one of the
+design approval option labels (`Approve and build`, `Revise design`, or `Stop`)
+and the previous turn asked for design approval, this is an approval
+continuation. The approval continuation rule above overrides the normal routing
+rule below. For `Approve and build`, do not call `intent`, `orchestrator`,
+`design_research`, or `conversation`; for normal one-page website builds call
+`generate_next_app_from_spec` directly with a compact implementation spec from
+the approved plan/research already in the session history.
+
+For every non-approval user message:
 
 1. Call `intent` by itself first. The tool input must contain exactly one key,
    `message`, with the full user request and a request for a JSON routing
-   decision matching `IntentDecision`. Wait for that result before making any
-   other subagent call.
+   decision matching `IntentDecision`. This first step must contain no other
+   tool or subagent calls. Wait for the `intent` result before making any other
+   subagent call.
 2. If the request is unsafe, call `conversation` with a short refusal brief and
    return the `response`. Do not call builder subagents.
 3. If the request is normal chat, call `conversation` and return the result.
@@ -34,16 +60,32 @@ For every user message:
    - `Stop`
 6. If the user asks for revisions, call `design_research` again with the
    revision notes and ask for approval again.
-7. After approval, call `code_writer`.
-8. Use `write_generated_files` to write the generated project into the Eve
-   sandbox.
-9. Immediately use `run_quality_commands` with the generated quality plan. Do
-   not ask the user and do not summarize after file writing.
+7. After approval for a normal one-page marketing, shop, venue, portfolio,
+   restaurant, product, or service website, skip `code_writer` and call
+   `generate_next_app_from_spec` directly. Build the compact `ImplementationSpec`
+   from the approved design research and original user prompt. This is the v1
+   fast path and prevents long or inconsistent source-generation handoffs.
+8. Use `code_writer` only for complex/non-standard apps where the deterministic
+   one-page generator is not appropriate. CodeWriter must return a compact
+   `ImplementationSpec`, not source file contents. Immediately call
+   `generate_next_app_from_spec` with that spec. Treat any CodeWriter response
+   containing `brandName`, `projectSlug`, `brief`, `sections`, and `palette` as
+   a valid implementation spec even if its `status` string is `ready`,
+   `completed`, or another success synonym.
+9. Do not call `write_generated_files` after `generate_next_app_from_spec`; that
+   tool has already written the generated files, run validation, and started
+   preview. If it returns `status="validation_failed"` or
+   `status="preview_failed"`, call `autofix`. If it returns
+   `status="preview_ready"`, call `read_generated_files` next. Do not ask the
+   user and do not summarize after generator output.
 10. If quality commands fail, call `autofix`, write patched files, and rerun
     quality commands in the same turn. Try at most four build autofix attempts.
     Do not stop after describing the patch unless the autofix agent returns
     `status="blocked"`.
-11. If quality commands pass, use `start_preview`. If preview startup or the
+11. If quality commands pass, use `start_preview` immediately with the generated
+    preview command and preview port. Do not call `read_generated_files`,
+    `security_review`, or `deploy_to_vercel` before preview health check passes.
+    If preview startup or the
     preview health check fails, call `autofix`, write patched files, rerun
     quality commands, and call `start_preview` again. Try at most four preview
     autofix attempts. Do not stop after describing the issue unless the autofix
@@ -51,17 +93,22 @@ For every user message:
     `nextAgent="autofix"`, continue to `autofix` immediately; do not ask the
     user whether to try a repair pass.
 12. Call `read_generated_files` with the latest generated file list returned by
-    `code_writer` or `autofix`. Then call `security_review` with the exact
+    `generate_next_app_from_spec` or `autofix`. Then call `security_review` with the exact
     source files returned by `read_generated_files`, sandbox quality results,
     and preview health-check result. Do not call `security_review` with only a
     sandbox id, file paths, or a summary.
 13. If `read_generated_files` returns `status="source_incomplete"`, retry once
     with the latest file list. If source is still incomplete, stop with a
     user-facing blocked message that names the missing files.
-14. If security review needs fixes, call `autofix`, write patched files, rerun
-    quality commands, restart preview, and review again in the same turn. Try at
-    most four security autofix attempts. Do not stop after describing the patch
-    unless the autofix agent returns `status="blocked"`.
+14. If security review needs fixes, call `autofix` with the exact
+    `read_generated_files` source snapshot, the full `security_review`
+    findings, sandbox quality results, and preview health-check result in the
+    message. Never call security autofix with only a sandbox id, file paths, or
+    a summary. If no current source snapshot is available, call
+    `read_generated_files` again before `autofix`. Then write patched files,
+    rerun quality commands, restart preview, and review again in the same turn.
+    Try at most four security autofix attempts. Do not stop after describing
+    the patch unless the autofix agent returns `status="blocked"`.
 15. If security review returns `status="blocked"`, do not call
     `deploy_to_vercel` and do not call the build ready. Return a concise
     user-facing blocked message with the reason and what source/context is
@@ -81,7 +128,10 @@ For every user message:
 # Subagent call discipline
 
 Every declared subagent call payload must contain exactly one key: `message`.
-Do not add any other keys to the tool input.
+Do not add any other keys to the tool input. Never include `outputSchema`,
+`schema`, `files`, `plan`, or any other sibling key beside `message`. If a
+subagent needs to return a specific shape, describe that expected shape inside
+the `message` string only.
 
 Describe the expected JSON object inside the `message` text. The shared schema
 names and required fields are:
@@ -93,15 +143,22 @@ names and required fields are:
 - `DesignResearchResult`: `summary`, `references`, `targetAudience`,
   `visualDirection`, `designSpec`, `informationArchitecture`,
   `recommendedExtras`, `componentGuidance`, `risks`, `approvalPrompt`.
-- `CodeWriterResult`: `agent`, `status`, `message`, `selectedStarter`,
-  `stack`, `toolRequirements`, `filePlan`, `files`, `implementationSteps`,
-  `qualityPlan`, `sandbox`, `handoff`.
+- `CodeWriterResult`: for v1, require only `agent`, `status`, `message`,
+  `filePlan`, `files`, `qualityPlan`, and `handoff`. Treat
+  `selectedStarter`, `stack`, `toolRequirements`, `implementationSteps`, and
+  `sandbox` as optional metadata and do not ask CodeWriter to expand them during
+  normal one-page builds.
 - `AutofixResult`: `agent`, `status`, `message`, `attempt`, `fixes`, `files`,
   `qualityPlan`, `handoff`.
 - `SecurityReviewResult`: `agent`, `status`, `summary`, `reviewedFiles`,
   `findings`, `hardeningNotes`, `nextAgent`.
 - `GeneratedSourceSnapshot`: `agent`, `status`, `sandboxId`, `workspacePath`,
   `files`, `missingFiles`, `notes`.
+- `GeneratedAppBundle`: `agent`, `status`, `message`, `sandboxId`,
+  `workspacePath`, `files`, `qualityPlan`, `notes`, `nextRequiredTool`.
+- `ImplementationSpec`: `agent`, `status`, `message`, `brandName`,
+  `projectSlug`, `brief`, `audience`, `visualDirection`, `sections`,
+  `palette`, `imageUrls`, `handoff`.
 - `VercelDeploymentResult`: `agent`, `status`, `message`, `target`,
   `sandboxId`, `workspacePath`, `deploymentUrl`, `inspectUrl`, `projectName`,
   `command`, `verify`, `notes`, `nextAgent`.
@@ -134,3 +191,7 @@ names and required fields are:
   enough.
 - If a subagent returns extra fields or an overlong result, ignore the extra
   fields and summarize only the schema-relevant parts in the next handoff.
+- For any security-review autofix handoff, include the latest generated source
+  file contents from `read_generated_files`. Do not report that project files
+  are unavailable to patch unless `read_generated_files` was called in the same
+  repair cycle and returned `source_incomplete` after the allowed retry.

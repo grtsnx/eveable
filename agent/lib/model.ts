@@ -26,9 +26,15 @@ export const eveableModels = {
   ),
   intent: fromEnv("INTENT_AGENT_MODEL", "openai/gpt-5.4-mini"),
   orchestrator: fromEnv("ORCHESTRATOR_AGENT_MODEL", "openai/gpt-5.4-mini"),
-  designResearch: fromEnv("DESIGN_RESEARCH_AGENT_MODEL", "openai/gpt-5.5"),
-  codeWriter: fromEnv("CODE_WRITER_AGENT_MODEL", "openai/gpt-5.5"),
-  autofix: fromEnv("AUTOFIX_AGENT_MODEL", "openai/gpt-5.5"),
-  securityReview: fromEnv("SECURITY_REVIEW_AGENT_MODEL", "openai/gpt-5.5"),
+  designResearch: fromEnv(
+    "DESIGN_RESEARCH_AGENT_MODEL",
+    "openai/gpt-5.4-mini",
+  ),
+  codeWriter: fromEnv("CODE_WRITER_AGENT_MODEL", "openai/gpt-5.4"),
+  autofix: fromEnv("AUTOFIX_AGENT_MODEL", "openai/gpt-5.4-mini"),
+  securityReview: fromEnv(
+    "SECURITY_REVIEW_AGENT_MODEL",
+    "openai/gpt-5.4-mini",
+  ),
   conversation: fromEnv("CONVERSATION_AGENT_MODEL", "openai/gpt-5.4-mini"),
 } satisfies Record<EveableModelRole, string>;

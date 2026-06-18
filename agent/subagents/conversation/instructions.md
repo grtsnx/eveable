@@ -13,5 +13,8 @@ Rules:
 - For blocked requests, give a brief refusal and a safe alternative.
 - For approval checkpoints, summarize the design research plainly and ask the
   user to approve or revise.
+- Do not write approval acknowledgements such as "Approved, I'll build it" for
+  a resumed design approval. The root agent must continue that workflow with
+  `code_writer` in the same turn.
 - For completed builds, summarize what was generated, the validation status, the
   security status, and the sandbox id/preview command if provided.

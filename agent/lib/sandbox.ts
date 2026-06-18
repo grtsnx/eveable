@@ -164,6 +164,11 @@ function normalizePackageManagerCommand(
     return portablePackageManagerCommand("run", runMatch[3], runMatch[2]);
   }
 
+  const packageRunnerMatch = normalized.match(/^(bunx|npx|pnpm\s+dlx|yarn\s+dlx)\s+(.+)$/i);
+  if (packageRunnerMatch) {
+    return portablePackageRunnerCommand(packageRunnerMatch[2]);
+  }
+
   return command;
 }
 
@@ -195,6 +200,21 @@ function portablePackageManagerCommand(
     `bun run ${script}${bunArgs};`,
     "elif command -v npm >/dev/null 2>&1; then",
     `npm run ${script}${npmArgs};`,
+    "else",
+    `echo ${shellQuote(fallbackMessage)} >&2; exit 127;`,
+    "fi",
+  ].join(" ");
+}
+
+function portablePackageRunnerCommand(args: string): string {
+  const trimmedArgs = args.trim();
+  const fallbackMessage = "No supported package runner found in sandbox";
+
+  return [
+    "if command -v bunx >/dev/null 2>&1; then",
+    `bunx ${trimmedArgs};`,
+    "elif command -v npx >/dev/null 2>&1; then",
+    `npx ${trimmedArgs};`,
     "else",
     `echo ${shellQuote(fallbackMessage)} >&2; exit 127;`,
     "fi",

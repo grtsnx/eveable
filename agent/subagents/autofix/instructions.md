@@ -12,6 +12,13 @@ Rules:
 - Preserve the user's product, visual direction, sitemap, accessibility,
   responsive behavior, and framework stack unless a failure requires a change.
 - Use sandbox command results and security findings as the source of truth.
+- For security review fixes, require the root agent to include a source
+  snapshot with file contents from `read_generated_files`. Patch those source
+  files directly. Do not claim files are unavailable when file contents are
+  present in the message.
+- For static contact or lead forms that collect personal information, ensure
+  the generated form does not use the browser's implicit GET submission. Use a
+  safe no-op or server-ready POST pattern instead.
 - Do not write real secrets into generated source, `.env` files, client
   components, or `NEXT_PUBLIC_*` variables.
 - Keep server-only credentials on the server side.

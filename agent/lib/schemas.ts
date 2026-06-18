@@ -119,6 +119,35 @@ export const GeneratedFileSchema = z.object({
   purpose: z.string(),
 });
 
+export const ImplementationSpecSchema = z.object({
+  agent: z.literal("code_writer"),
+  status: z.enum(["spec_ready", "blocked"]),
+  message: z.string(),
+  brandName: z.string(),
+  projectSlug: z.string(),
+  brief: z.string(),
+  audience: z.string(),
+  visualDirection: z.string(),
+  sections: z.array(
+    z.object({
+      name: z.string(),
+      purpose: z.string(),
+      copy: z.string(),
+    }),
+  ),
+  palette: z.object({
+    primary: z.string(),
+    accent: z.string(),
+    background: z.string(),
+    foreground: z.string(),
+  }),
+  imageUrls: z.array(z.string()).default([]),
+  handoff: z.object({
+    nextTool: z.literal("generate_next_app_from_spec"),
+    reason: z.string(),
+  }),
+});
+
 export const GeneratedSourceSnapshotSchema = z.object({
   agent: z.literal("sandbox"),
   status: z.enum(["source_ready", "source_incomplete"]),
@@ -136,6 +165,43 @@ export const QualityPlanSchema = z.object({
   previewPort: z.number().int().positive(),
   autofixAgentRequired: z.boolean(),
   codeReviewAgentRequired: z.boolean(),
+});
+
+export const GeneratedAppBundleSchema = z.object({
+  agent: z.literal("app_generator"),
+  status: z.enum(["preview_ready", "validation_failed", "preview_failed"]),
+  message: z.string(),
+  sandboxId: z.string(),
+  workspacePath: z.literal("generated-app"),
+  files: z.array(GeneratedFileSchema),
+  qualityPlan: QualityPlanSchema,
+  validation: z.object({
+    commands: z.array(z.string()),
+    commandResults: z.array(
+      z.object({
+        command: z.string(),
+        exitCode: z.number().nullable(),
+        stdout: z.string(),
+        stderr: z.string(),
+      }),
+    ),
+    buildStatus: z.object({
+      install: z.enum(["not_started", "passed", "failed", "skipped"]),
+      typecheck: z.enum(["not_started", "passed", "failed", "skipped"]),
+      lint: z.enum(["not_started", "passed", "failed", "skipped"]),
+      build: z.enum(["not_started", "passed", "failed", "skipped"]),
+    }),
+  }),
+  preview: z.object({
+    ok: z.boolean(),
+    command: z.string().nullable(),
+    port: z.number().int().positive(),
+    probeCommand: z.string().nullable(),
+    stdout: z.string(),
+    stderr: z.string(),
+  }),
+  notes: z.array(z.string()),
+  nextRequiredTool: z.enum(["read_generated_files", "autofix"]),
 });
 
 export const CodeWriterResultSchema = z.object({

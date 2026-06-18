@@ -8,7 +8,7 @@ import {
 
 export default defineTool({
   description:
-    "Write a complete generated app file set into the Eve sandbox under /workspace/generated-app. Use this only after CodeWriter returns structured files. After this tool succeeds, the root agent must immediately call run_quality_commands with the generated quality plan.",
+    "Write a complete generated app file set into the Eve sandbox under /workspace/generated-app. Use this after generate_next_app_from_spec returns files. After this tool succeeds, the root agent must immediately call run_quality_commands with the generated quality plan.",
   inputSchema: z.object({
     files: z.array(GeneratedFileSchema).min(1),
     resetWorkspace: z.boolean().default(true),

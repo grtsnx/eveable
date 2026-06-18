@@ -28,6 +28,20 @@ Run Eve locally:
 pnpm run dev
 ```
 
+The default dev command runs Eve in no-UI API server mode, hides full subagent
+streams, and collapses tool calls so generated source does not flood the
+terminal. Use the quiet TUI for manual experiments:
+
+```bash
+pnpm run dev:tui
+```
+
+Use verbose mode only when you need raw child-agent output for debugging:
+
+```bash
+pnpm run dev:verbose
+```
+
 Run all checks:
 
 ```bash

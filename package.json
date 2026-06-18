@@ -13,7 +13,9 @@
     "audit": "pnpm audit --prod --audit-level=critical",
     "build": "eve build",
     "ci": "pnpm run audit && pnpm run typecheck && pnpm run build && pnpm run smoke",
-    "dev": "rm -rf .eve .output && eve dev",
+    "dev": "rm -rf .eve .output && eve dev --no-ui --subagents hidden --tools collapsed --logs stderr",
+    "dev:tui": "rm -rf .eve .output && eve dev --subagents hidden --tools collapsed --logs stderr",
+    "dev:verbose": "rm -rf .eve .output && eve dev --subagents full --tools full --logs stderr",
     "smoke": "node scripts/smoke.mjs",
     "start": "eve start",
     "typecheck": "tsgo"

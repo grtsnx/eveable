@@ -236,13 +236,17 @@ Eveable can use different models per role.
 | Root | `EVEABLE_ROOT_MODEL` | `openai/gpt-5.4-mini` |
 | Intent | `INTENT_AGENT_MODEL` | `openai/gpt-5.4-mini` |
 | Orchestrator | `ORCHESTRATOR_AGENT_MODEL` | `openai/gpt-5.4-mini` |
-| Design Research | `DESIGN_RESEARCH_AGENT_MODEL` | `openai/gpt-5.5` |
-| Code Writer | `CODE_WRITER_AGENT_MODEL` | `openai/gpt-5.5` |
-| Autofix | `AUTOFIX_AGENT_MODEL` | `openai/gpt-5.5` |
-| Security Review | `SECURITY_REVIEW_AGENT_MODEL` | `openai/gpt-5.5` |
+| Design Research | `DESIGN_RESEARCH_AGENT_MODEL` | `openai/gpt-5.4-mini` |
+| Code Writer | `CODE_WRITER_AGENT_MODEL` | `openai/gpt-5.4` |
+| Autofix | `AUTOFIX_AGENT_MODEL` | `openai/gpt-5.4-mini` |
+| Security Review | `SECURITY_REVIEW_AGENT_MODEL` | `openai/gpt-5.4-mini` |
 | Conversation | `CONVERSATION_AGENT_MODEL` | `openai/gpt-5.4-mini` |
 
-Use Vercel AI Gateway model ids, including provider prefixes such as `openai/gpt-5.5`.
+Use Vercel AI Gateway model ids, including provider prefixes such as `openai/gpt-5.4-mini`.
+The defaults keep routing, research, review, and chat on mini, while CodeWriter
+uses standard `openai/gpt-5.4` for larger structured code output. You can still
+assign stronger, cheaper, or provider-specific models per role through the env
+vars above.
 
 ## Install
 
@@ -252,10 +256,25 @@ pnpm install --frozen-lockfile
 
 ## Run Locally
 
-Start Eve:
+Start Eve in API server mode:
 
 ```bash
 pnpm run dev
+```
+
+`pnpm run dev` starts Eve with `--no-ui`, hidden subagent streams, and collapsed
+tool calls. That is the recommended mode for Eveable because the builder can
+generate large source payloads and the interactive TUI can repaint those events
+heavily. To use Eve's interactive terminal UI, run:
+
+```bash
+pnpm run dev:tui
+```
+
+To debug every child-agent payload and tool argument, use:
+
+```bash
+pnpm run dev:verbose
 ```
 
 The local Eve API is available at:
@@ -285,7 +304,8 @@ rm -rf .eve .output
 pnpm run dev
 ```
 
-The `dev` script already clears `.eve` and `.output` before launching.
+The `dev`, `dev:tui`, and `dev:verbose` scripts already clear `.eve` and
+`.output` before launching.
 
 ## Test And Validate
 
