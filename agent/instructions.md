@@ -47,7 +47,9 @@ For every user message:
     preview health check fails, call `autofix`, write patched files, rerun
     quality commands, and call `start_preview` again. Try at most four preview
     autofix attempts. Do not stop after describing the issue unless the autofix
-    agent returns `status="blocked"`.
+    agent returns `status="blocked"`. If `start_preview` returns
+    `nextAgent="autofix"`, continue to `autofix` immediately; do not ask the
+    user whether to try a repair pass.
 12. Call `read_generated_files` with the latest generated file list returned by
     `code_writer` or `autofix`. Then call `security_review` with the exact
     source files returned by `read_generated_files`, sandbox quality results,

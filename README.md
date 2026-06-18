@@ -130,7 +130,7 @@ Eveable is intentionally strict about what counts as complete:
 | `agent/channels/eve.ts` | Public Eve session/stream entrypoint. |
 | `agent/tools/write_generated_files.ts` | Writes generated app files into `/workspace/generated-app`. |
 | `agent/tools/run_quality_commands.ts` | Runs finite install/typecheck/build commands. |
-| `agent/tools/start_preview.ts` | Starts preview and verifies HTTP health inside the sandbox. |
+| `agent/tools/start_preview.ts` | Starts preview, tries safe Next.js fallback commands, and verifies HTTP health inside the sandbox. |
 | `agent/tools/read_generated_files.ts` | Reads generated source back from the sandbox for security review. |
 | `agent/tools/deploy_to_vercel.ts` | Deploys the generated app to Vercel and verifies the URL. |
 | `scripts/smoke.mjs` | Static project-shape checks used by CI. |
@@ -155,7 +155,7 @@ Eveable uses narrow local Eve tools instead of broad shell/file access:
 | --- | --- |
 | `write_generated_files` | Writes only safe relative paths under `/workspace/generated-app`. |
 | `run_quality_commands` | Runs finite commands only. Preview/server commands are filtered out. |
-| `start_preview` | Starts the generated app preview and probes `http://127.0.0.1:<port>`. |
+| `start_preview` | Starts the generated app preview, falls back to known Next.js start/dev commands, and probes `http://127.0.0.1:<port>`. |
 | `read_generated_files` | Reads generated source files from `/workspace/generated-app` before security review. |
 | `deploy_to_vercel` | Runs Vercel CLI from the generated workspace and verifies the returned URL. |
 | `search_unsplash_images` | CodeWriter-local image search using optional Unsplash credentials. |
