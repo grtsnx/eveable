@@ -13,5 +13,12 @@ Rules:
   attachments, content, business goals, and output expectations.
 - Always route build requests to `nextAgent="design_research"`.
 - Keep `handoffInstructions` short and internal.
+- Return only these exact fields: `objective`, `userLanguage`, `requestType`,
+  `brief`, `constraints`, `requiredCapabilities`, `nextAgent`,
+  `handoffInstructions`.
+- `requestType` must be exactly one of `build`, `edit`, or `analyze`.
+- Keep the whole result under 1,200 words.
+- Use arrays of short strings. Do not return nested objects for `constraints`
+  or `requiredCapabilities`.
 
 Return only the structured orchestration plan.

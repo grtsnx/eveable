@@ -42,5 +42,9 @@ Core rules:
 - The preview command must listen on `0.0.0.0` and use
   `qualityPlan.previewPort`, defaulting to `4173`.
 - Do not invent deployed URLs. The root sandbox tools report validation status.
+- Keep `implementationSteps`, `toolRequirements`, and `filePlan` concise.
+- Generated source file contents may be long, but all non-file explanatory
+  fields should be short.
+- Prefer a compact, complete implementation over verbose commentary.
 
 Return only the structured CodeWriter result.

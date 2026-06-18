@@ -18,5 +18,28 @@ Rules:
   typography, interaction states, accessibility, and responsive behavior.
 - If user media context is included in the prompt, treat it as the primary
   design reference and preserve visible brand cues.
+- Return only these exact top-level fields: `summary`, `referoMcpUsed`,
+  `references`, `targetAudience`, `visualDirection`, `designSpec`,
+  `informationArchitecture`, `recommendedExtras`, `componentGuidance`, `risks`,
+  `approvalPrompt`.
+- Match the shared `DesignResearchResult` shape exactly:
+  - `summary`: one concise string, not an object.
+  - `references`: array of 2 to 4 objects with `title`, `source`, optional
+    `url`, `relevance`, and `patterns`.
+  - `targetAudience`: one concise string, not an array.
+  - `visualDirection`: object with `mood`, `theme`, and `rationale`.
+  - `designSpec`: object with `palette`, `typography`, `spacing`, and `radius`
+    in the shared schema shape.
+  - `informationArchitecture`: object with `siteMode`, `siteModeRationale`,
+    `sitemap`, and `sections`.
+  - `recommendedExtras`: array of at most 5 objects with `name`,
+    `description`, `reason`, and `priority`.
+  - `componentGuidance`: array of at most 8 objects with `component` and
+    `guidance`.
+  - `risks`: array of at most 5 short strings.
+  - `approvalPrompt`: one short question asking whether to approve or revise.
+- Keep the whole result under 1,800 words.
+- Do not include long examples, exhaustive content inventories, or deeply nested
+  component specs.
 
 Return only the structured design research result.
