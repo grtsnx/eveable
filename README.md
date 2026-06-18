@@ -329,18 +329,34 @@ To debug every child-agent payload and tool argument, use:
 pnpm run dev:verbose
 ```
 
+## How To Prompt Eveable
+
+`pnpm run dev` runs Eveable in API server mode, so you do not type prompts into
+the terminal that is running the server. Keep that terminal open, then send
+messages from a second terminal, script, or UI client.
+
 The local Eve API is available at:
 
 ```text
 http://127.0.0.1:2000/eve/v1/session
 ```
 
-Start a session:
+Start a session from a second terminal:
 
 ```bash
-curl -X POST http://127.0.0.1:2000/eve/v1/session \
+curl -sS -X POST http://127.0.0.1:2000/eve/v1/session \
   -H "content-type: application/json" \
-  -d '{"message":"build a one-page landing page for a boutique analytics studio"}'
+  -d '{"message":"Build a polished one-page website for a boutique plant shop called Moss & Circuit. Include a strong hero, featured plant cards, care tips, opening hours, a small gallery with realistic plant imagery, and a contact form. Make it responsive, modern, warm but not beige-heavy, and ready to preview and deploy."}'
+```
+
+The response includes a `sessionId` and `continuationToken`:
+
+```json
+{
+  "continuationToken": "eve:...",
+  "ok": true,
+  "sessionId": "wrun_..."
+}
 ```
 
 Stream a session:
@@ -348,6 +364,31 @@ Stream a session:
 ```bash
 curl -N http://127.0.0.1:2000/eve/v1/session/<sessionId>/stream
 ```
+
+When the stream reaches the design approval checkpoint, approve the build with
+the same `sessionId` and `continuationToken`:
+
+```bash
+curl -sS -X POST http://127.0.0.1:2000/eve/v1/session/<sessionId> \
+  -H "content-type: application/json" \
+  -d '{"continuationToken":"<continuationToken>","message":"Approve and build"}'
+```
+
+Then keep streaming the same session:
+
+```bash
+curl -N http://127.0.0.1:2000/eve/v1/session/<sessionId>/stream
+```
+
+If you prefer an interactive terminal prompt instead of API mode, run:
+
+```bash
+pnpm run dev:tui
+```
+
+API mode is the recommended default because Eveable can emit large tool and
+subagent events during generation, validation, preview, security review, and
+deployment.
 
 If Eve dev reports stale workflow cache errors after edits, restart with a clean cache:
 
