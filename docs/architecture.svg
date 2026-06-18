@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-labelledby="title desc">
-  <title id="title">Mayar Eve Builder Architecture</title>
-  <desc id="desc">Architecture diagram showing Eve session input flowing through Mayar root orchestration, subagents, human approval, sandbox validation, autofix, security review, and final response.</desc>
+  <title id="title">Eveable Architecture</title>
+  <desc id="desc">Architecture diagram showing Eve session input flowing through Eveable root orchestration, subagents, human approval, sandbox validation, autofix, security review, and final response.</desc>
   <defs>
     <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
       <path d="M2,2 L10,6 L2,10 Z" fill="#344054"/>
@@ -26,7 +26,7 @@
   <text class="text" x="74" y="88">Public Eve HTTP Surface</text>
   <text class="small" x="74" y="122">/eve/v1/session starts durable sessions. /eve/v1/session/:id/stream replays NDJSON events.</text>
   <rect class="root" x="760" y="72" width="420" height="72" rx="14"/>
-  <text class="text" x="788" y="105">Mayar Root Agent</text>
+  <text class="text" x="788" y="105">Eveable Root Agent</text>
   <text class="small" x="788" y="130">Coordinates routing, approval, tools, retries, final summary</text>
 
   <rect class="agent" x="70" y="245" width="190" height="82" rx="14"/>
@@ -55,7 +55,7 @@
 
   <rect class="tool" x="350" y="552" width="230" height="82" rx="14"/>
   <text class="text" x="383" y="585">Sandbox Tools</text>
-  <text class="small" x="379" y="610">write, quality, preview</text>
+  <text class="small" x="374" y="610">write, quality, preview, deploy</text>
 
   <rect class="agent" x="640" y="552" width="190" height="82" rx="14"/>
   <text class="text" x="689" y="585">Autofix</text>
@@ -67,7 +67,7 @@
 
   <rect class="root" x="70" y="665" width="1040" height="56" rx="14"/>
   <text class="text" x="98" y="700">Final Summary</text>
-  <text class="small" x="265" y="699">validated files, command results, sandbox id, preview command, security status</text>
+  <text class="small" x="265" y="699">validated files, sandbox id, preview status, security status, Vercel URL</text>
 
   <path class="line" d="M760 108 H300 C230 108 180 158 166 244"/>
   <path class="line" d="M260 286 H314"/>

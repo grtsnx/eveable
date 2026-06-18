@@ -4,7 +4,7 @@ set -euo pipefail
 release_env="${1:-production}"
 version_input="${2:-}"
 
-package_slug="mayar-eve-builder"
+package_slug="eveable"
 package_version="$(node -p "require('./package.json').version")"
 
 if [[ -n "$version_input" ]]; then

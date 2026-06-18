@@ -4,9 +4,9 @@
 
 ### Added
 
-- Standalone Mayar Eve builder pipeline with root orchestration and declared subagents.
+- Standalone Eveable builder pipeline with root orchestration and declared subagents.
 - Subagents for intent, conversation, orchestrator, design research, code writer, autofix, and security review.
-- Shared Zod schemas for Mayar's structured handoffs and generated-project validation results.
+- Shared Zod schemas for Eveable's structured handoffs and generated-project validation results.
 - Role-specific model configuration with environment overrides.
 - Eve sandbox configuration and root sandbox tools for generated files, quality commands, and preview startup.
 - CodeWriter-local Unsplash image search tool.
@@ -16,7 +16,7 @@
 
 ### Changed
 
-- Replaced the original Muna/Gemini-style single-instruction identity with a Mayar app and website builder identity.
+- Replaced the original Muna/Gemini-style single-instruction identity with the Eveable app and website builder identity.
 - Switched default runtime model routing to OpenAI models through Vercel AI Gateway.
 - Preserved the design approval checkpoint through Eve's built-in human-input flow.
 

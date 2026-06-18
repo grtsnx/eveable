@@ -41,7 +41,7 @@ export default defineTool({
       notes: [
         "Generated files were written under /workspace/generated-app.",
         "This is not a completed build; run_quality_commands must run next.",
-        "No preview URL is resolved in Mayar v1.",
+        "A public URL is created later by deploy_to_vercel after validation, preview, and security review pass.",
       ],
       nextRequiredTool: "run_quality_commands" as const,
     };

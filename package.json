@@ -1,5 +1,6 @@
 {
-  "name": "mayar",
+  "name": "eveable",
+  "description": "Eveable is an alternative to Lovable built on Vercel Eve.",
   "version": "1.0.0",
   "packageManager": "pnpm@11.5.0",
   "type": "module",

@@ -1,14 +1,16 @@
-# Mayar Eve Builder
+# Eveable
 
-Mayar is a standalone Eve-powered AI app and website builder. It is designed as a comparison implementation for the existing NestJS `jaxagentsdk` pipeline while leaving that codebase untouched.
+Eveable is an alternative to Lovable built on Vercel Eve. It is an AI app and website builder that turns prompts into validated, previewed, security-reviewed, and deployed Next.js applications.
 
-Mayar accepts normal chat and build prompts through Eve's built-in durable session API. For build prompts, it coordinates specialist subagents, pauses for design approval, writes generated Next.js projects into an Eve sandbox, validates them, runs an autofix loop when needed, performs a security review, and returns a final build summary.
+This repository is the standalone Eve-powered implementation of the existing `jaxagentsdk` builder pipeline. It leaves the NestJS `jaxagentsdk` untouched so developers can compare both approaches side by side.
 
-![Mayar Eve Builder architecture](docs/architecture.svg)
+Eveable accepts normal chat and build prompts through Eve's built-in durable session API. For build prompts, it coordinates specialist subagents, pauses for design approval, writes generated Next.js projects into an Eve sandbox, validates them, runs an autofix loop when needed, performs a security review, deploys to Vercel, and returns a final build summary with the verified deployment URL.
 
-## What Mayar Builds
+![Eveable architecture](docs/architecture.svg)
 
-Mayar v1 focuses on generated web applications:
+## What Eveable Builds
+
+Eveable v1 focuses on generated web applications:
 
 - Next.js
 - TypeScript
@@ -19,11 +21,11 @@ Mayar v1 focuses on generated web applications:
 - Optional Unsplash image discovery
 - Optional InsForge server-only placeholders for generated backend code
 
-Mayar does not modify `jaxagentsdk`. It lives as its own Eve project and can be deployed, tested, or evolved independently.
+Eveable does not modify `jaxagentsdk`. It lives as its own Eve project and can be deployed, tested, or evolved independently.
 
 ## Architecture
 
-Eve is filesystem-first. Mayar follows that model:
+Eve is filesystem-first. Eveable follows that model:
 
 ```text
 agent/
@@ -82,7 +84,7 @@ Generated application files are written inside the Eve sandbox, not directly int
 
 Every successful `write_generated_files`, `run_quality_commands`, `start_preview`, and `deploy_to_vercel` result includes the sandbox id and `workspacePath: "generated-app"`. In the Eve dev TUI or stream output, look for those tool results to inspect the generated file list, commands, preview port, and deployment URL.
 
-For local debugging, you can also ask Mayar to show the generated file list or use the sandbox id from the tool result to inspect the active Eve sandbox workspace.
+For local debugging, you can also ask Eveable to show the generated file list or use the sandbox id from the tool result to inspect the active Eve sandbox workspace.
 
 ### Why subagent calls use `message` only
 
@@ -95,17 +97,17 @@ Eve exposes declared subagents as tools with this shape:
 }
 ```
 
-During local testing with the current Eve/provider stack, valid JSON text from child sessions was rejected when the root passed `outputSchema`. Mayar therefore keeps typed Zod schemas in `agent/lib/schemas.ts` for developers, but the root instructs subagents to return plain JSON text through the `message` path. This keeps the durable subagent pipeline stable while preserving typed schema documentation.
+During local testing with the current Eve/provider stack, valid JSON text from child sessions was rejected when the root passed `outputSchema`. Eveable therefore keeps typed Zod schemas in `agent/lib/schemas.ts` for developers, but the root instructs subagents to return plain JSON text through the `message` path. This keeps the durable subagent pipeline stable while preserving typed schema documentation.
 
 ## Multi-Model Setup
 
-Mayar mirrors the `jaxagentsdk` strategy of using lighter models for routing and stronger models for design/code/security work.
+Eveable mirrors the `jaxagentsdk` strategy of using lighter models for routing and stronger models for design/code/security work.
 
 Defaults:
 
 | Role | Environment Variable | Default Model |
 | --- | --- | --- |
-| Root | `MAYAR_ROOT_MODEL` | `openai/gpt-5.4-mini` |
+| Root | `EVEABLE_ROOT_MODEL` | `openai/gpt-5.4-mini` |
 | Intent | `INTENT_AGENT_MODEL` | `openai/gpt-5.4-mini` |
 | Orchestrator | `ORCHESTRATOR_AGENT_MODEL` | `openai/gpt-5.4-mini` |
 | Design Research | `DESIGN_RESEARCH_AGENT_MODEL` | `openai/gpt-5.5` |
@@ -115,6 +117,8 @@ Defaults:
 | Conversation | `CONVERSATION_AGENT_MODEL` | `openai/gpt-5.4-mini` |
 
 Use Vercel AI Gateway model ids, including provider prefixes such as `openai/gpt-5.5`.
+`EVEABLE_ROOT_MODEL` replaces the older `MAYAR_ROOT_MODEL`; the runtime still
+accepts the old key as a backward-compatible fallback.
 
 ## Environment
 
@@ -136,12 +140,12 @@ INSFORGE_API_KEY=...
 VERCEL_TOKEN=...
 VERCEL_PROJECT_NAME=...
 VERCEL_SCOPE=...
-MAYAR_DEPLOY_ENV_ALLOWLIST=...
+EVEABLE_DEPLOY_ENV_ALLOWLIST=...
 ```
 
-`VERCEL_TOKEN` is required for generated app deployments. `VERCEL_PROJECT_NAME` and `VERCEL_SCOPE` are optional controls for the destination project/team. `MAYAR_DEPLOY_ENV_ALLOWLIST` can add comma-separated server-only env vars to pass through Vercel deployment flags.
+`VERCEL_TOKEN` is required for generated app deployments. `VERCEL_PROJECT_NAME` and `VERCEL_SCOPE` are optional controls for the destination project/team. `EVEABLE_DEPLOY_ENV_ALLOWLIST` can add comma-separated server-only env vars to pass through Vercel deployment flags. The older `MAYAR_DEPLOY_ENV_ALLOWLIST` is still accepted as a fallback.
 
-Do not put real secrets into generated apps. Mayar treats server credentials as runtime/deployment values and never writes real credentials into generated source files or generated `.env.local` files.
+Do not put real secrets into generated apps. Eveable treats server credentials as runtime/deployment values and never writes real credentials into generated source files or generated `.env.local` files.
 
 ## Install
 

@@ -1,6 +1,6 @@
 import { defineAgent } from "eve";
-import { mayarModels } from "./lib/model.js";
+import { eveableModels } from "./lib/model.js";
 
 export default defineAgent({
-  model: mayarModels.root,
+  model: eveableModels.root,
 });

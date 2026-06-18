@@ -9,7 +9,7 @@ import {
 
 export default defineTool({
   description:
-    "Start the generated app preview process in the Eve sandbox and verify it responds over HTTP before reporting success. Mayar v1 reports the sandbox id, preview command, and port, not an external preview URL.",
+    "Start the generated app preview process in the Eve sandbox and verify it responds over HTTP before reporting success. This tool reports sandbox preview metadata; deploy_to_vercel resolves the public Vercel URL.",
   inputSchema: z.object({
     previewCommand: z.string().min(1),
     previewPort: z.number().int().positive().default(4173),
@@ -71,7 +71,7 @@ export default defineTool({
       sandboxId: sandbox.id,
       workspacePath: generatedWorkspacePath,
       message:
-        "Preview process was started and responded to the HTTP health check. Mayar v1 does not resolve an external preview URL.",
+        "Preview process was started and responded to the HTTP health check.",
       previewCommand: redactSensitive(normalizedPreviewCommand),
       previewPort,
       previewProcessStarted: true,
@@ -88,7 +88,7 @@ export default defineTool({
       },
       notes: [
         "Preview is reachable inside the Eve sandbox on the reported port.",
-        "External preview URL support should be added as a later adapter.",
+        "Call deploy_to_vercel after security_review passes to create a public Vercel preview URL.",
       ],
       nextAgent: "security_review" as const,
     };

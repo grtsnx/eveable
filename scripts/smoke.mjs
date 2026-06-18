@@ -43,7 +43,7 @@ if (pkg.version !== "1.0.0") {
 
 const modelConfig = readFileSync(join(root, "agent/lib/model.ts"), "utf8");
 for (const key of [
-  "MAYAR_ROOT_MODEL",
+  "EVEABLE_ROOT_MODEL",
   "INTENT_AGENT_MODEL",
   "ORCHESTRATOR_AGENT_MODEL",
   "DESIGN_RESEARCH_AGENT_MODEL",
@@ -66,4 +66,4 @@ if (process.exitCode) {
   process.exit(process.exitCode);
 }
 
-console.log("smoke: Mayar project structure, release version, and model config look good.");
+console.log("smoke: Eveable project structure, release version, and model config look good.");
