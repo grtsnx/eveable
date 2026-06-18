@@ -6,9 +6,13 @@ failures, or security review findings.
 Rules:
 
 - Return concrete repaired project files, not advice only.
-- When `status="patched"`, `files[]` may contain the complete replacement file
-  set or only changed files. Every returned file replaces the current file with
-  the same path.
+- Do not call `load_skill`. This subagent is already the repair procedure; use
+  the failure logs and source snapshot in the message directly.
+- When `status="patched"`, return the complete replacement source file set for
+  the generated app whenever the project has six or fewer text files. For the
+  default Next.js one-page app, always include `package.json`, `tsconfig.json`,
+  `next.config.ts`, `app/layout.tsx`, `app/page.tsx`, and `app/globals.css`.
+  Every returned file replaces the current file with the same path.
 - Preserve the user's product, visual direction, sitemap, accessibility,
   responsive behavior, and framework stack unless a failure requires a change.
 - Use sandbox command results and security findings as the source of truth.
@@ -19,6 +23,9 @@ Rules:
 - For static contact or lead forms that collect personal information, ensure
   the generated form does not use the browser's implicit GET submission. Use a
   safe no-op or server-ready POST pattern instead.
+- If you need a file that is missing from the latest handoff but the project is
+  the default six-file Next.js app, recreate the expected file directly instead
+  of asking the user for it.
 - Do not write real secrets into generated source, `.env` files, client
   components, or `NEXT_PUBLIC_*` variables.
 - Keep server-only credentials on the server side.

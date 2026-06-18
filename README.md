@@ -60,7 +60,7 @@ flowchart TD
   Autofix --> Generator
 
   ReadSource -->|"source missing"| UserAction["user action required"]
-  ReadSource -->|"source ready"| Security["security_review subagent"]
+  ReadSource -->|"source ready"| Security["run_security_review tool"]
 
   Security -->|"needs fixes"| Autofix
   Security -->|"blocked"| UserAction
@@ -148,6 +148,7 @@ Eveable is intentionally strict about what counts as complete:
 | `agent/tools/run_quality_commands.ts` | Runs finite install/typecheck/build commands. |
 | `agent/tools/start_preview.ts` | Starts preview, tries safe Next.js fallback commands, and verifies HTTP health inside the sandbox. |
 | `agent/tools/read_generated_files.ts` | Reads generated source back from the sandbox for security review. |
+| `agent/tools/run_security_review.ts` | Deterministically checks generated source for release-blocking security issues. |
 | `agent/tools/deploy_to_vercel.ts` | Deploys the generated app to Vercel and verifies the URL. |
 | `scripts/smoke.mjs` | Static project-shape checks used by CI. |
 
@@ -161,7 +162,7 @@ Eveable is intentionally strict about what counts as complete:
 | `design_research` | Produces the approval-ready design direction and implementation brief. |
 | `code_writer` | Generates a full Next.js TypeScript App Router project. |
 | `autofix` | Repairs generated files after build, preview, security, or deployment failures. |
-| `security_review` | Reviews generated source for secrets, browser env leaks, and common web risks. |
+| `security_review` | Optional model-backed deeper review agent; the deploy gate uses `run_security_review` for deterministic structured output. |
 
 ## Tools
 
@@ -409,12 +410,13 @@ deployment.
 If Eve dev reports stale workflow cache errors after edits, restart with a clean cache:
 
 ```bash
-rm -rf .eve .output
+rm -rf .eve .output .workflow-data
 pnpm run dev
 ```
 
 The `dev`, `dev:tui`, and `dev:verbose` scripts already clear `.eve` and
-`.output` before launching.
+`.output` before launching. They also clear `.workflow-data` so stale local
+workflow runs cannot try to resume against a deleted Eve workflow cache.
 
 ## Test And Validate
 
@@ -449,7 +451,7 @@ Generated app deployment happens from inside the Eve sandbox:
 2. It uses `VERCEL_TOKEN` from the Eveable runtime environment.
 3. It passes selected server-only env vars through Vercel CLI `-e` and `-b` flags.
 4. It parses the Vercel deployment URL.
-5. It verifies the URL with `vercel curl`.
+5. It verifies deployment readiness with `vercel inspect`.
 
 If `VERCEL_TOKEN` is missing, Eveable reports a blocked deployment with the exact configuration required. It does not invent deployment URLs.
 

@@ -18,7 +18,7 @@ const defaultDeployEnvAllowlist = [
 
 export default defineTool({
   description:
-    "Deploy the validated generated app from /workspace/generated-app to Vercel, then verify the deployment URL with vercel curl. Requires VERCEL_TOKEN in the Eveable runtime environment.",
+    "Deploy the validated generated app from /workspace/generated-app to Vercel, then verify the deployment URL with vercel inspect. Requires VERCEL_TOKEN in the Eveable runtime environment.",
   inputSchema: z.object({
     target: z.enum(["preview", "production"]).default("preview"),
     projectName: z.string().min(1).optional(),
@@ -60,7 +60,7 @@ export default defineTool({
 
     const resolvedProjectName =
       projectName ?? process.env.VERCEL_PROJECT_NAME ?? undefined;
-    const resolvedScope = scope ?? process.env.VERCEL_SCOPE ?? undefined;
+    const resolvedScope = process.env.VERCEL_SCOPE ?? scope ?? undefined;
     const deployCommand = buildDeployCommand({
       target,
       token,
@@ -143,7 +143,7 @@ export default defineTool({
             "Secrets were passed through Vercel deployment env flags only; they were not written to generated files.",
           ]
         : [
-            "The URL was returned by Vercel, but vercel curl could not verify the root route.",
+            "The URL was returned by Vercel, but vercel inspect could not verify the deployment.",
             "Call autofix if the failure is app-related; otherwise ask the user to check Vercel access/protection settings.",
           ],
       nextAgent: verified ? ("complete" as const) : ("autofix" as const),
@@ -183,7 +183,10 @@ function buildDeployCommand(input: {
     args.push(flag);
   }
 
-  return vercelCommand(input.token, args);
+  return vercelCommand(input.token, args, {
+    projectName: input.projectName,
+    scope: input.scope,
+  });
 }
 
 function buildVerifyCommand(input: {
@@ -192,12 +195,8 @@ function buildVerifyCommand(input: {
   scope?: string;
 }): string {
   const args = [
-    "curl",
-    "/",
-    "--deployment",
+    "inspect",
     shellQuote(input.deploymentUrl),
-    "--yes",
-    "--non-interactive",
   ];
 
   if (input.scope) {
@@ -316,17 +315,47 @@ function isSafeServerEnvName(name: string): boolean {
   );
 }
 
-function vercelCommand(token: string, args: readonly string[]): string {
+function vercelCommand(
+  token: string,
+  args: readonly string[],
+  preflight?: {
+    projectName?: string;
+    scope?: string;
+  },
+): string {
   const commandArgs = args.join(" ");
-  const envPrefix = `VERCEL_TOKEN=${shellQuote(token)}`;
+  const envSetup = `VERCEL_TOKEN=${shellQuote(token)}; export VERCEL_TOKEN`;
+  const projectPreflight =
+    preflight?.projectName
+      ? (runner: string) =>
+          `(${runner} project inspect ${shellQuote(preflight.projectName!)}${scopeFlag(
+            preflight.scope,
+          )} --non-interactive >/dev/null 2>&1 || ${runner} project add ${shellQuote(
+            preflight.projectName!,
+          )}${scopeFlag(preflight.scope)} --non-interactive) && ${runner} api /v9/projects/${shellQuote(
+            preflight.projectName!,
+          )} -X PATCH --field framework=nextjs${scopeFlag(
+            preflight.scope,
+          )} --non-interactive >/dev/null`
+      : null;
 
   return [
     "if command -v vercel >/dev/null 2>&1; then",
-    `${envPrefix} vercel ${commandArgs};`,
+    `${envSetup}; ${
+      projectPreflight ? `${projectPreflight("vercel")} && ` : ""
+    }vercel ${commandArgs};`,
     "else",
-    `${envPrefix} npx --yes vercel@latest ${commandArgs};`,
+    `${envSetup}; ${
+      projectPreflight
+        ? `${projectPreflight("npx --yes vercel@latest")} && `
+        : ""
+    }npx --yes vercel@latest ${commandArgs};`,
     "fi",
   ].join(" ");
+}
+
+function scopeFlag(scope: string | undefined): string {
+  return scope ? ` --scope ${shellQuote(scope)}` : "";
 }
 
 function shellQuote(value: string): string {

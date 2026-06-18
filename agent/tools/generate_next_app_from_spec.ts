@@ -25,8 +25,43 @@ const defaultImages = [
   "https://images.unsplash.com/photo-1520412099551-62b6bafeb5bb?auto=format&fit=crop&w=1200&q=80",
 ];
 
+const LooseSectionSchema = z
+  .object({
+    name: z.string().optional(),
+    title: z.string().optional(),
+    label: z.string().optional(),
+    purpose: z.string().optional(),
+    copy: z.string().optional(),
+    suggestedCopy: z.string().optional(),
+    content: z.string().optional(),
+    notes: z.string().optional(),
+  })
+  .passthrough();
+
+const LooseImplementationSpecSchema = z
+  .object({
+    agent: z.string().optional(),
+    status: z.string().optional(),
+    message: z.string().optional(),
+    brandName: z.string().optional(),
+    projectSlug: z.string().optional(),
+    brief: z.union([z.string(), z.array(z.string())]).optional(),
+    audience: z.string().optional(),
+    targetAudience: z.string().optional(),
+    visualDirection: z
+      .union([z.string(), z.record(z.string(), z.unknown())])
+      .optional(),
+    sections: z.array(LooseSectionSchema).optional(),
+    informationArchitecture: z.unknown().optional(),
+    designSpec: z.unknown().optional(),
+    palette: z.unknown().optional(),
+    imageUrls: z.array(z.string()).optional(),
+    handoff: z.unknown().optional(),
+  })
+  .passthrough();
+
 const inputSchema = z.object({
-  spec: ImplementationSpecSchema,
+  spec: LooseImplementationSpecSchema,
 });
 
 export default defineTool({
@@ -34,7 +69,8 @@ export default defineTool({
     "Expand a compact CodeWriter implementation spec into a complete small Next.js app and write it directly into /workspace/generated-app. Use this after code_writer; do not ask code_writer to return source files.",
   inputSchema,
   outputSchema: GeneratedAppBundleSchema,
-  async execute({ spec }, ctx) {
+  async execute({ spec: rawSpec }, ctx) {
+    const spec = normalizeImplementationSpec(rawSpec);
     const sandbox = await ctx.getSandbox();
     const projectSlug = slugify(spec.projectSlug || spec.brandName);
     const brandName = spec.brandName.trim() || "Eveable App";
@@ -58,13 +94,13 @@ export default defineTool({
               typecheck: "tsc --noEmit",
             },
             dependencies: {
-              "@types/node": "latest",
-              "@types/react": "latest",
-              "@types/react-dom": "latest",
-              next: "latest",
-              react: "latest",
-              "react-dom": "latest",
-              typescript: "latest",
+              "@types/node": "25.9.3",
+              "@types/react": "19.2.17",
+              "@types/react-dom": "19.2.3",
+              next: "16.2.9",
+              react: "19.2.7",
+              "react-dom": "19.2.7",
+              typescript: "6.0.3",
             },
           },
           null,
@@ -101,11 +137,17 @@ export default defineTool({
       },
       {
         path: "next.config.ts",
-        purpose: "Minimal Next.js config.",
+        purpose: "Next.js config with a narrow remote image allowlist.",
         content: [
           "import type { NextConfig } from \"next\";",
           "",
-          "const nextConfig: NextConfig = {};",
+          "const nextConfig: NextConfig = {",
+          "  images: {",
+          "    remotePatterns: [",
+          "      { protocol: \"https\", hostname: \"images.unsplash.com\" },",
+          "    ],",
+          "  },",
+          "};",
           "",
           "export default nextConfig;",
           "",
@@ -251,6 +293,174 @@ function emptyPreview(port: number) {
   };
 }
 
+function normalizeImplementationSpec(
+  raw: z.infer<typeof LooseImplementationSpecSchema>,
+): z.infer<typeof ImplementationSpecSchema> {
+  const brandName = normalizeText(raw.brandName, "Eveable App");
+  const projectSlug = normalizeText(raw.projectSlug, slugify(brandName));
+  const brief = normalizeBrief(raw.brief, raw.message, brandName);
+  const designSpec = asRecord(raw.designSpec);
+  const informationArchitecture = asRecord(raw.informationArchitecture);
+
+  return {
+    agent: "code_writer",
+    status: "spec_ready",
+    message: normalizeText(
+      raw.message,
+      "Normalized approval data into a generator-ready implementation spec.",
+    ),
+    brandName,
+    projectSlug,
+    brief,
+    audience: normalizeText(raw.audience ?? raw.targetAudience, "Website visitors"),
+    visualDirection: normalizeVisualDirection(raw.visualDirection),
+    sections: normalizeLooseSections(
+      raw.sections,
+      informationArchitecture?.sections,
+    ),
+    palette: normalizeLoosePalette(raw.palette, designSpec?.palette),
+    imageUrls: Array.isArray(raw.imageUrls) ? raw.imageUrls : [],
+    handoff: {
+      nextTool: "generate_next_app_from_spec",
+      reason: "Normalized by the local Eve generator tool.",
+    },
+  };
+}
+
+function normalizeBrief(
+  brief: string | string[] | undefined,
+  message: string | undefined,
+  brandName: string,
+): string {
+  if (Array.isArray(brief)) {
+    const joined = brief.filter(Boolean).join(" ");
+    if (joined.trim()) return joined.trim();
+  }
+
+  if (typeof brief === "string" && brief.trim()) return brief.trim();
+  if (message?.trim()) return message.trim();
+
+  return `${brandName} needs a polished, responsive one-page website with a strong hero, clear sections, useful calls to action, and realistic imagery.`;
+}
+
+function normalizeVisualDirection(
+  value: string | Record<string, unknown> | undefined,
+): string {
+  if (typeof value === "string" && value.trim()) return value.trim();
+  if (!value) return "Modern, polished, responsive, accessible, and visually warm.";
+
+  const direction = asRecord(value) ?? {};
+  const mood = normalizeText(direction.mood, "");
+  const theme = normalizeText(direction.theme, "");
+  const rationale = normalizeText(direction.rationale, "");
+  const parts = [mood, theme, rationale].filter(Boolean);
+  return parts.length > 0
+    ? parts.join("; ")
+    : "Modern, polished, responsive, accessible, and visually warm.";
+}
+
+function normalizeLooseSections(
+  primary: z.infer<typeof LooseSectionSchema>[] | undefined,
+  fallback: unknown,
+): z.infer<typeof ImplementationSpecSchema>["sections"] {
+  const candidates = Array.isArray(primary)
+    ? primary
+    : Array.isArray(fallback)
+      ? fallback
+      : [];
+
+  const sections = candidates
+    .map((section, index) => normalizeLooseSection(section, index))
+    .filter((section) => section.name || section.copy);
+
+  return sections.length > 0
+    ? sections.slice(0, 8)
+    : [
+        {
+          name: "Hero",
+          purpose: "Introduce the offer",
+          copy: "A confident first screen with a clear value proposition and primary action.",
+        },
+        {
+          name: "Highlights",
+          purpose: "Show the most important content",
+          copy: "Feature cards summarize the products, services, or benefits visitors need to scan first.",
+        },
+        {
+          name: "Contact",
+          purpose: "Convert interest",
+          copy: "A straightforward form and visit details make the next step easy.",
+        },
+      ];
+}
+
+function normalizeLooseSection(
+  raw: unknown,
+  index: number,
+): z.infer<typeof ImplementationSpecSchema>["sections"][number] {
+  const section = asRecord(raw);
+  const name =
+    normalizeText(section?.name, "") ||
+    normalizeText(section?.title, "") ||
+    normalizeText(section?.label, "") ||
+    `Section ${index + 1}`;
+  const purpose = normalizeText(section?.purpose, "Support the page goal");
+  const copy =
+    normalizeText(section?.copy, "") ||
+    normalizeText(section?.suggestedCopy, "") ||
+    normalizeText(section?.content, "") ||
+    normalizeText(section?.notes, "") ||
+    purpose;
+
+  return { name, purpose, copy };
+}
+
+function normalizeLoosePalette(
+  primaryPalette: unknown,
+  fallbackPalette: unknown,
+): z.infer<typeof ImplementationSpecSchema>["palette"] {
+  const palette = asRecord(primaryPalette) ?? asRecord(fallbackPalette) ?? {};
+
+  return {
+    primary: normalizeColor(palette.primary, "#2f6b4f"),
+    accent: normalizeColor(palette.accent ?? palette.secondary, "#d7e7ca"),
+    background: normalizeColor(palette.background, "#f7f8f3"),
+    foreground: normalizeColor(palette.foreground, "#1d2a22"),
+  };
+}
+
+function normalizeColor(value: unknown, fallback: string): string {
+  if (typeof value === "string" && value.trim()) return value.trim();
+  if (Array.isArray(value)) {
+    const firstString = value.find((item) => typeof item === "string");
+    if (typeof firstString === "string" && firstString.trim()) {
+      return firstString.trim();
+    }
+  }
+
+  const record = asRecord(value);
+  if (record) {
+    for (const key of ["hex", "value", "color"]) {
+      const candidate = record[key];
+      if (typeof candidate === "string" && candidate.trim()) {
+        return candidate.trim();
+      }
+    }
+  }
+
+  return fallback;
+}
+
+function normalizeText(value: unknown, fallback: string): string {
+  return typeof value === "string" && value.trim() ? value.trim() : fallback;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
 function buildProbeCommand(port: number): string {
   return [
     `for i in $(seq 1 60); do`,
@@ -275,6 +485,8 @@ function buildQualityPlan(): z.infer<typeof QualityPlanSchema> {
 }
 
 function renderLayout(brandName: string, brief: string): string {
+  const description = buildMetadataDescription(brandName, brief);
+
   return [
     "import type { Metadata } from \"next\";",
     "import type { ReactNode } from \"react\";",
@@ -282,7 +494,7 @@ function renderLayout(brandName: string, brief: string): string {
     "",
     "export const metadata: Metadata = {",
     `  title: ${JSON.stringify(`${brandName} | Boutique Plant Shop`)},`,
-    `  description: ${JSON.stringify(brief.slice(0, 155))},`,
+    `  description: ${JSON.stringify(description)},`,
     "};",
     "",
     "export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {",
@@ -294,6 +506,17 @@ function renderLayout(brandName: string, brief: string): string {
     "}",
     "",
   ].join("\n");
+}
+
+function buildMetadataDescription(brandName: string, brief: string): string {
+  const fallback = `${brandName} is a polished boutique plant shop website with curated plants, practical care guidance, realistic imagery, opening hours, and a safe contact form.`;
+  const candidate = brief.trim() || fallback;
+
+  if (candidate.length <= 155) return candidate;
+
+  const clipped = candidate.slice(0, 152);
+  const lastSpace = clipped.lastIndexOf(" ");
+  return `${clipped.slice(0, lastSpace > 80 ? lastSpace : 152)}...`;
 }
 
 function renderPage(input: {
@@ -316,6 +539,11 @@ function renderPage(input: {
   const nav = ["Plants", "Care", "Hours", "Contact"];
 
   return [
+    "\"use client\";",
+    "",
+    "import type { FormEvent } from \"react\";",
+    "import { useState } from \"react\";",
+    "",
     "const navItems = " + JSON.stringify(nav) + ";",
     "const featuredPlants = " + JSON.stringify(featured.map(([name, detail, price]) => ({ name, detail, price }))) + ";",
     "const careTips = " + JSON.stringify(care) + ";",
@@ -323,6 +551,13 @@ function renderPage(input: {
     "const gallery = " + JSON.stringify(images.slice(0, 5)) + ";",
     "",
     "export default function Home() {",
+    "  const [submitted, setSubmitted] = useState(false);",
+    "",
+    "  function handleContactSubmit(event: FormEvent<HTMLFormElement>) {",
+    "    event.preventDefault();",
+    "    setSubmitted(true);",
+    "  }",
+    "",
     "  return (",
     "    <main>",
     "      <header className=\"nav\">",
@@ -360,11 +595,15 @@ function renderPage(input: {
     "      </section>",
     "      <section id=\"contact\" className=\"contact\">",
     "        <div><p className=\"eyebrow\">Contact</p><h2>Ask about availability or care.</h2></div>",
-    "        <form method=\"post\" action=\"#\" aria-label=\"Contact Moss and Circuit\">",
-    "          <input name=\"name\" placeholder=\"Name\" autoComplete=\"name\" required />",
-    "          <input name=\"email\" type=\"email\" placeholder=\"Email\" autoComplete=\"email\" required />",
-    "          <textarea name=\"message\" placeholder=\"What are you looking for?\" required />",
+    "        <form onSubmit={handleContactSubmit} noValidate aria-label=\"Contact Moss and Circuit\">",
+    "          <label className=\"srOnly\" htmlFor=\"contact-name\">Name</label>",
+    "          <input id=\"contact-name\" name=\"name\" placeholder=\"Name\" autoComplete=\"name\" required />",
+    "          <label className=\"srOnly\" htmlFor=\"contact-email\">Email</label>",
+    "          <input id=\"contact-email\" name=\"email\" type=\"email\" placeholder=\"Email\" autoComplete=\"email\" required />",
+    "          <label className=\"srOnly\" htmlFor=\"contact-message\">Message</label>",
+    "          <textarea id=\"contact-message\" name=\"message\" placeholder=\"What are you looking for?\" required />",
     "          <button type=\"submit\">Send inquiry</button>",
+    "          <p className=\"formStatus\" aria-live=\"polite\">{submitted ? 'Thanks. This demo form is ready for a server-side integration.' : 'This demo does not transmit personal data yet.'}</p>",
     "        </form>",
     "      </section>",
     "    </main>",
@@ -391,6 +630,7 @@ function renderCss(palette: {
     ".section,.split,.contact{padding:clamp(42px,6vw,82px) clamp(18px,5vw,64px)}.sectionHead{display:flex;justify-content:space-between;gap:28px;align-items:end;margin-bottom:24px}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.card,.details article,.note{border:1px solid var(--line);border-radius:8px;padding:24px;background:white}.card strong{color:var(--primary)}",
     ".split{display:grid;grid-template-columns:1fr 1fr;gap:34px;align-items:center}.split ul{padding-left:20px;line-height:2}.details{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.gallery{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;padding:0 clamp(18px,5vw,64px)}.gallery img{height:280px;width:100%;border-radius:8px}.gallery img:first-child{grid-row:span 2;height:570px}",
     ".hours{background:var(--soft)}.note{display:grid;gap:8px}.note span,.details p,.card p{color:color-mix(in srgb,var(--fg),transparent 28%);line-height:1.6}.contact{display:grid;grid-template-columns:.8fr 1.2fr;gap:30px}.contact form{display:grid;gap:12px}.contact input,.contact textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:14px 16px;font:inherit;background:white}.contact textarea{min-height:130px;resize:vertical}",
+    ".srOnly{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.formStatus{min-height:22px;margin:2px 0 0;color:color-mix(in srgb,var(--fg),transparent 34%);font-size:14px}",
     "@media (max-width:800px){.nav{align-items:flex-start}.nav nav{flex-wrap:wrap;justify-content:flex-end}.hero,.split,.contact{grid-template-columns:1fr}.hero{min-height:auto}.cards,.details,.gallery{grid-template-columns:1fr}.gallery img,.gallery img:first-child{height:260px}h1{font-size:46px}.sectionHead{display:block}}",
     "",
   ].join("\n");

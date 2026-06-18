@@ -138,6 +138,7 @@ function normalizePreviewArgs(args: string, port: number): string {
     .replace(/\s-H\s+\S+/g, "")
     .replace(/^PORT=\d+\s+/, "")
     .replace(/^HOSTNAME=\S+\s+/, "")
+    .replace(/^--\s+/, "")
     .trim()
     .concat(` -H 0.0.0.0 -p ${port}`)
     .trim();
@@ -193,8 +194,9 @@ function portablePackageManagerCommand(
     ].join(" ");
   }
 
-  const npmArgs = trimmedArgs ? ` -- ${trimmedArgs}` : "";
-  const bunArgs = trimmedArgs ? ` ${trimmedArgs}` : "";
+  const forwardedArgs = trimmedArgs.replace(/^--\s+/, "").trim();
+  const npmArgs = forwardedArgs ? ` -- ${forwardedArgs}` : "";
+  const bunArgs = forwardedArgs ? ` ${forwardedArgs}` : "";
   return [
     "if command -v bun >/dev/null 2>&1; then",
     `bun run ${script}${bunArgs};`,
