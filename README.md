@@ -23,35 +23,50 @@ The v1 release includes root orchestration, seven declared subagents, typed shar
 Eve is filesystem-first: an agent is a directory of instructions, tools, channels, sandbox config, shared code, and subagents. Eveable follows that shape closely.
 
 ```mermaid
-flowchart LR
-  User["Client or Eve TUI"] --> Session["/eve/v1/session"]
-  Session --> Stream["/eve/v1/session/:id/stream"]
-  Session --> Root["Eveable Root Agent"]
+flowchart TD
+  User["Client / Eve TUI"]
+  Session["POST /eve/v1/session"]
+  Stream["GET /eve/v1/session/:id/stream"]
+  Root["Eveable Root Agent"]
+
+  User --> Session
+  Session --> Stream
+  Session --> Root
 
   Root --> Intent["intent subagent"]
-  Intent -->|"conversation"| Conversation["conversation subagent"]
+
   Intent -->|"unsafe"| Refusal["conversation refusal"]
-  Intent -->|"build or edit"| Orchestrator["orchestrator subagent"]
+  Intent -->|"conversation"| Conversation["conversation subagent"]
+  Intent -->|"build / edit"| Orchestrator["orchestrator subagent"]
 
   Orchestrator --> Design["design_research subagent"]
-  Design --> Approval["ask_question approval checkpoint"]
+  Design --> Approval["ask_question design approval"]
+
   Approval -->|"Revise design"| Design
   Approval -->|"Stop"| Conversation
-  Approval -->|"Approve and build"| CodeWriter["code_writer subagent"]
+  Approval -->|"Approve one-page site"| Generator["generate_next_app_from_spec tool"]
+  Approval -->|"Approve complex app"| CodeWriter["code_writer subagent"]
 
-  CodeWriter --> WriteFiles["write_generated_files tool"]
-  WriteFiles --> Quality["run_quality_commands tool"]
-  Quality -->|"failed"| Autofix["autofix subagent"]
-  Autofix --> WriteFiles
-  Quality -->|"passed"| Preview["start_preview tool"]
+  CodeWriter --> Spec["compact ImplementationSpec"]
+  Spec --> Generator
+
+  Generator --> Write["write files to /workspace/generated-app"]
+  Write --> Validate["install + typecheck + build"]
+  Validate -->|"failed"| Autofix["autofix subagent"]
+  Validate -->|"passed"| Preview["start sandbox preview"]
   Preview -->|"failed"| Autofix
   Preview -->|"healthy"| ReadSource["read_generated_files tool"]
+
+  Autofix --> Generator
+
   ReadSource -->|"source missing"| UserAction["user action required"]
   ReadSource -->|"source ready"| Security["security_review subagent"]
+
   Security -->|"needs fixes"| Autofix
   Security -->|"blocked"| UserAction
   Security -->|"passed"| Deploy["deploy_to_vercel tool"]
-  Deploy -->|"failed app issue"| Autofix
+
+  Deploy -->|"app issue"| Autofix
   Deploy -->|"missing Vercel config"| UserAction
   Deploy -->|"verified URL"| Final["conversation final summary"]
 ```
@@ -64,10 +79,11 @@ Eveable is intentionally strict about what counts as complete:
 2. Unsafe prompts are refused before builder subagents run.
 3. Build prompts go through `orchestrator` and `design_research`.
 4. Code generation pauses for user approval through Eve's `ask_question`.
-5. Generated files are written only under `/workspace/generated-app`.
-6. Finite quality commands run before any preview or deployment.
-7. Source files are read back from the sandbox before security review.
-8. Build, preview, security, and deployment failures route through `autofix` when repairable.
+5. Normal one-page websites use the deterministic `generate_next_app_from_spec` fast path.
+6. Generated files are written only under `/workspace/generated-app`.
+7. Finite quality commands run before any preview or deployment.
+8. Source files are read back from the sandbox before security review.
+9. Build, preview, security, and deployment failures route through `autofix` when repairable.
 9. A final "ready" or "deployed" response is allowed only after:
    - quality commands pass
    - preview health check passes
