@@ -12,6 +12,7 @@ const requiredFiles = [
   "agent/subagents/intent/agent.ts",
   "agent/subagents/orchestrator/agent.ts",
   "agent/subagents/design_research/agent.ts",
+  "agent/subagents/design_research/connections/refero.ts",
   "agent/subagents/code_writer/agent.ts",
   "agent/subagents/autofix/agent.ts",
   "agent/subagents/security_review/agent.ts",
@@ -140,9 +141,41 @@ if (!instructions.includes("If no current source snapshot is available")) {
   fail("security autofix must reread generated source before patching");
 }
 
+const designResearchInstructions = readFileSync(
+  join(root, "agent/subagents/design_research/instructions.md"),
+  "utf8",
+);
+if (!designResearchInstructions.includes("Use the Refero MCP connection")) {
+  fail("design research instructions must use Refero MCP when configured");
+}
+if (!designResearchInstructions.includes("referoMcpUsed=true")) {
+  fail("design research instructions must report whether Refero was used");
+}
+
+const referoConnection = readFileSync(
+  join(root, "agent/subagents/design_research/connections/refero.ts"),
+  "utf8",
+);
+if (!referoConnection.includes("defineMcpClientConnection")) {
+  fail("Refero connection must be an Eve MCP client connection");
+}
+if (!referoConnection.includes("REFERO_API_KEY")) {
+  fail("Refero connection must read REFERO_API_KEY");
+}
+
 const readme = readFileSync(join(root, "README.md"), "utf8");
 if (readme.includes("docs/")) {
   fail("README should be self-contained and must not link to docs/");
+}
+if (!readme.includes("Refero MCP")) {
+  fail("README must document the optional Refero MCP connection");
+}
+
+const envSample = readFileSync(join(root, "env.sample"), "utf8");
+for (const key of ["REFERO_MCP_URL", "REFERO_API_KEY", "REFERO_MCP_TOKEN"]) {
+  if (!envSample.includes(key)) {
+    fail(`env.sample must document ${key}`);
+  }
 }
 
 if (existsSync(join(root, "docs"))) {

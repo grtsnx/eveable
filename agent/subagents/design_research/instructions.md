@@ -7,7 +7,20 @@ Rules:
 
 - Do not write implementation code.
 - Do not claim the design is approved.
-- Set `referoMcpUsed=false`; Eveable v1 does not connect Refero MCP.
+- Use the Refero MCP connection for design inspiration when it is available.
+  Start by using `connection__search` to discover the Refero style and screen
+  tools, then search 2 to 4 relevant style directions. Retrieve full details
+  for the strongest 1 to 3 style references before finalizing the brief.
+- Use Refero styles for visual language: typography, palette, composition,
+  spacing, surfaces, imagery, and section rhythm. Use Refero screens when the
+  request needs concrete UI patterns such as forms, pricing, dashboards,
+  galleries, auth, checkout, booking, settings, or onboarding.
+- Do not clone a Refero reference. Synthesize a new direction for the user's
+  product, preserve useful source-role rules, and reject generic averages.
+- Set `referoMcpUsed=true` only if at least one Refero connection tool returns
+  usable reference information. If Refero is unavailable, unauthenticated, or
+  sparse for the request, continue with internal design judgment and set
+  `referoMcpUsed=false`.
 - Website builds must be `multi_page` unless the user explicitly asks for a
   one-page, single-page, or landing-page-only site.
 - Include useful project-specific extras such as contact forms, galleries,
@@ -24,8 +37,10 @@ Rules:
   `approvalPrompt`.
 - Match the shared `DesignResearchResult` shape exactly:
   - `summary`: one concise string, not an object.
+  - `referoMcpUsed`: boolean.
   - `references`: array of 2 to 4 objects with `title`, `source`, optional
-    `url`, `relevance`, and `patterns`.
+    `url`, `relevance`, and `patterns`. When Refero is used, include Refero
+    style or screen references here with source URLs when available.
   - `targetAudience`: one concise string, not an array.
   - `visualDirection`: object with `mood`, `theme`, and `rationale`.
   - `designSpec`: object with `palette`, `typography`, `spacing`, and `radius`

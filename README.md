@@ -10,6 +10,7 @@ Eveable began as a standalone Eve-powered implementation of the existing `jaxage
 - **Real builder pipeline:** Eveable does not stop after writing files. It validates, previews, reviews, deploys, and verifies.
 - **Open architecture:** each specialist is a folder under `agent/subagents/`, each integration is a typed Eve tool under `agent/tools/`.
 - **Sandbox-first generation:** generated projects are written to `/workspace/generated-app`, not into the repository.
+- **Refero-grounded design research:** the design research subagent can use Refero MCP for real visual references before approval.
 - **Vercel deployment:** validated apps are deployed through `deploy_to_vercel` when `VERCEL_TOKEN` is configured.
 
 ## Current Version
@@ -40,6 +41,8 @@ flowchart TD
   Intent -->|"build / edit"| Orchestrator["orchestrator subagent"]
 
   Orchestrator --> Design["design_research subagent"]
+  Design --> Refero["Refero MCP connection\noptional design inspiration"]
+  Refero --> Design
   Design --> Approval["ask_question design approval"]
 
   Approval -->|"Revise design"| Design
@@ -78,13 +81,14 @@ Eveable is intentionally strict about what counts as complete:
 1. The root agent must call `intent` first for every user message.
 2. Unsafe prompts are refused before builder subagents run.
 3. Build prompts go through `orchestrator` and `design_research`.
-4. Code generation pauses for user approval through Eve's `ask_question`.
-5. Normal one-page websites use the deterministic `generate_next_app_from_spec` fast path.
-6. Generated files are written only under `/workspace/generated-app`.
-7. Finite quality commands run before any preview or deployment.
-8. Source files are read back from the sandbox before security review.
-9. Build, preview, security, and deployment failures route through `autofix` when repairable.
-9. A final "ready" or "deployed" response is allowed only after:
+4. `design_research` uses Refero MCP when configured, but continues with internal design judgment if Refero is unavailable.
+5. Code generation pauses for user approval through Eve's `ask_question`.
+6. Normal one-page websites use the deterministic `generate_next_app_from_spec` fast path.
+7. Generated files are written only under `/workspace/generated-app`.
+8. Finite quality commands run before any preview or deployment.
+9. Source files are read back from the sandbox before security review.
+10. Build, preview, security, and deployment failures route through `autofix` when repairable.
+11. A final "ready" or "deployed" response is allowed only after:
    - quality commands pass
    - preview health check passes
    - security review passes
@@ -110,6 +114,8 @@ Eveable is intentionally strict about what counts as complete:
 │   │   ├── code_writer/
 │   │   ├── conversation/
 │   │   ├── design_research/
+│   │   │   └── connections/
+│   │   │       └── refero.ts
 │   │   ├── intent/
 │   │   ├── orchestrator/
 │   │   └── security_review/
@@ -144,6 +150,7 @@ Eveable is intentionally strict about what counts as complete:
 | `agent/lib/sandbox.ts` | Safe path handling, command normalization, redaction, and sandbox helpers. |
 | `agent/sandbox/sandbox.ts` | Eve `defaultBackend()` sandbox setup. |
 | `agent/channels/eve.ts` | Public Eve session/stream entrypoint. |
+| `agent/subagents/design_research/connections/refero.ts` | Optional Refero MCP connection used only by the design research subagent. |
 | `agent/tools/write_generated_files.ts` | Writes generated app files into `/workspace/generated-app`. |
 | `agent/tools/run_quality_commands.ts` | Runs finite install/typecheck/build commands. |
 | `agent/tools/start_preview.ts` | Starts preview, tries safe Next.js fallback commands, and verifies HTTP health inside the sandbox. |
@@ -159,7 +166,7 @@ Eveable is intentionally strict about what counts as complete:
 | `intent` | Classifies the request, rejects unsafe work, and chooses the next route. |
 | `conversation` | Writes user-facing chat, refusals, approval summaries, and final summaries. |
 | `orchestrator` | Converts a safe build request into a concise internal plan. |
-| `design_research` | Produces the approval-ready design direction and implementation brief. |
+| `design_research` | Produces the approval-ready design direction and implementation brief. Uses Refero MCP for style and screen inspiration when configured. |
 | `code_writer` | Generates a full Next.js TypeScript App Router project. |
 | `autofix` | Repairs generated files after build, preview, security, or deployment failures. |
 | `security_review` | Optional model-backed deeper review agent; the deploy gate uses `run_security_review` for deterministic structured output. |
@@ -178,6 +185,22 @@ Eveable uses narrow local Eve tools instead of broad shell/file access:
 | `search_unsplash_images` | CodeWriter-local image search using optional Unsplash credentials. |
 
 `bash.ts` and `write_file.ts` are present as disabled broad tools. Keep them disabled unless you are intentionally changing the trust model.
+
+## MCP Connections
+
+Eveable v1 keeps MCP usage narrow. The only authored MCP connection is Refero,
+and it is scoped to `agent/subagents/design_research/` so code generation,
+autofix, deployment, and security review do not inherit it.
+
+| Connection | Location | Purpose | Required env |
+| --- | --- | --- | --- |
+| `refero` | `agent/subagents/design_research/connections/refero.ts` | Search curated styles and real web UI screen references before design approval. | Optional `REFERO_API_KEY` or `REFERO_MCP_TOKEN` |
+
+The design researcher asks Eve's `connection__search` for Refero tools, then
+uses style references first and screen references only when the build needs a
+concrete UI pattern. If Refero is missing, unauthenticated, or has no useful
+matches, the subagent sets `referoMcpUsed=false` and continues without blocking
+the build.
 
 ## Generated Code Location
 
@@ -272,9 +295,19 @@ Optional generation integrations:
 ```bash
 UNSPLASH_ACCESS_KEY=...
 UNSPLASH_API_BASE_URL=https://api.unsplash.com
+
+REFERO_MCP_URL=https://api.refero.design/mcp
+REFERO_API_KEY=...
+# or, if your secret is named this way:
+REFERO_MCP_TOKEN=...
+
 INSFORGE_API_BASE_URL=...
 INSFORGE_API_KEY=...
 ```
+
+Refero is used only for design inspiration in the `design_research` subagent.
+Do not commit Refero keys. Put them in `.env.local` for local development or in
+your deployed Eveable project environment.
 
 `EVEABLE_ROOT_MODEL` replaces the older `MAYAR_ROOT_MODEL`; the runtime still accepts `MAYAR_ROOT_MODEL` as a fallback. `EVEABLE_DEPLOY_ENV_ALLOWLIST` replaces `MAYAR_DEPLOY_ENV_ALLOWLIST`; that older key is also still accepted as a fallback.
 
@@ -478,6 +511,7 @@ vercel whoami --token "$VERCEL_TOKEN"
 - Added finite quality command validation, preview startup, preview health check, security review, Vercel deployment, and URL verification.
 - Added role-based model selection with environment overrides.
 - Added CI and release workflows for audit, typecheck, Eve build, smoke checks, packaging, artifact upload, and GitHub releases.
+- Added optional Refero MCP design inspiration for the design research subagent.
 
 ## Release Workflow
 

@@ -37,7 +37,7 @@ export const OrchestratorPlanSchema = z.object({
 
 export const DesignResearchResultSchema = z.object({
   summary: z.string(),
-  referoMcpUsed: z.literal(false),
+  referoMcpUsed: z.boolean(),
   references: z.array(
     z.object({
       title: z.string(),

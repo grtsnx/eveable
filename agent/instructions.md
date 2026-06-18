@@ -143,8 +143,8 @@ names and required fields are:
 - `ConversationResult`: `response`.
 - `OrchestratorPlan`: `objective`, `userLanguage`, `requestType`, `brief`,
   `constraints`, `requiredCapabilities`, `nextAgent`, `handoffInstructions`.
-- `DesignResearchResult`: `summary`, `references`, `targetAudience`,
-  `visualDirection`, `designSpec`, `informationArchitecture`,
+- `DesignResearchResult`: `summary`, `referoMcpUsed`, `references`,
+  `targetAudience`, `visualDirection`, `designSpec`, `informationArchitecture`,
   `recommendedExtras`, `componentGuidance`, `risks`, `approvalPrompt`.
 - `CodeWriterResult`: for v1, require only `agent`, `status`, `message`,
   `filePlan`, `files`, `qualityPlan`, and `handoff`. Treat
