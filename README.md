@@ -359,6 +359,22 @@ The response includes a `sessionId` and `continuationToken`:
 }
 ```
 
+Creating a session only starts the run and returns identifiers. It does not
+print the event stream in the same terminal response. Use the returned
+`sessionId` in a separate stream request:
+
+```bash
+curl -N http://127.0.0.1:2000/eve/v1/session/wrun_.../stream
+```
+
+The stream is newline-delimited JSON. For a more readable local view, pipe it
+through `jq`:
+
+```bash
+curl -N http://127.0.0.1:2000/eve/v1/session/wrun_.../stream \
+  | jq -c 'select(.type=="message.completed" or .type=="input.requested" or .type=="actions.requested" or .type=="action.result" or .type=="session.waiting")'
+```
+
 Stream a session:
 
 ```bash
