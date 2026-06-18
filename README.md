@@ -206,6 +206,42 @@ Deployment setup:
 VERCEL_TOKEN=...
 ```
 
+Create a Vercel token from **Vercel Dashboard -> Account Settings -> Tokens**.
+For local development, save it in `.env.local`:
+
+```bash
+VERCEL_TOKEN=...
+VERCEL_SCOPE=your-team-or-username
+VERCEL_PROJECT_NAME=eveable-generated-apps
+```
+
+`pnpm run dev` loads `.env.local` for Eveable, but your shell does not
+automatically load it for direct CLI commands. If you want to run Vercel CLI
+commands with the token from your terminal, source the file first:
+
+```bash
+set -a
+source .env.local
+set +a
+
+vercel whoami --token "$VERCEL_TOKEN"
+```
+
+If `vercel whoami --token "$VERCEL_TOKEN"` says the token is missing, your shell
+has not loaded `.env.local`; the file may still be correct.
+
+To discover the correct scope:
+
+```bash
+vercel whoami
+```
+
+Use the active team slug or username as `VERCEL_SCOPE`. For example:
+
+```bash
+VERCEL_SCOPE=mordules-projects
+```
+
 Optional deployment controls:
 
 ```bash
@@ -343,6 +379,17 @@ Generated app deployment happens from inside the Eve sandbox:
 5. It verifies the URL with `vercel curl`.
 
 If `VERCEL_TOKEN` is missing, Eveable reports a blocked deployment with the exact configuration required. It does not invent deployment URLs.
+
+When testing deployment manually, remember that `.env.local` is an application
+env file, not a shell profile. Either start Eveable with `pnpm run dev`, which
+loads it for the runtime, or source it before direct CLI tests:
+
+```bash
+set -a
+source .env.local
+set +a
+vercel whoami --token "$VERCEL_TOKEN"
+```
 
 ## Release Notes
 
